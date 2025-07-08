@@ -294,6 +294,14 @@ class CalendarApp(QtWidgets.QWidget):
             button.setFixedSize(50,40)
             self.layout_calendar.addWidget(button, 2, col_index)
 
+            if day <= datetime.now().date():
+                label = QtWidgets.QLabel(f'{hours}h')
+                label.setAlignment(QtCore.Qt.AlignCenter)
+                self.layout_calendar.addWidget(label, 3, col_index)
+
+            
+
+
         start_str = self.current_week_start.strftime('%d-%m')
         end_str = (self.current_week_start + timedelta(days=6)).strftime('%d-%m')
         self.label_abovecalendar.setText(f'{start_str} - {end_str}')
@@ -304,7 +312,7 @@ class CalendarApp(QtWidgets.QWidget):
 
     def previous(self):
         if self.showingyear:
-            pass
+            QtWidgets.QMessageBox.information(self, "Information", "Switching years is currently unavailable.")
         elif self.showingmonth:
             if self.month > 1:
                 self.month -= 1
@@ -319,7 +327,7 @@ class CalendarApp(QtWidgets.QWidget):
             
     def nexxt(self):
         if self.showingyear:
-            pass
+            QtWidgets.QMessageBox.information(self, "Information", "Switching years is currently unavailable.")
         elif self.showingmonth:
             if self.month < 12:
                 self.month += 1
