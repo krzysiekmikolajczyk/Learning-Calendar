@@ -1,15 +1,19 @@
-from PySide6 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore, QtGui
 import sys
 import calendar
 from datetime import datetime, timedelta
 import json
 import os
+from BlurWindow.blurWindow import GlobalBlur
 
 class CalendarApp(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Calendar')
         self.setGeometry(200,200, 300,300)
+        GlobalBlur(self.winId(), Dark=True, Acrylic=True, QWidget= self)
+
+        self.setStyleSheet("background-color: rgba(0, 0, 0, 0)")
 
         self.data = {}
 
@@ -45,25 +49,41 @@ class CalendarApp(QtWidgets.QWidget):
         label_changeview = QtWidgets.QLabel('Change view')
         layout_head.addWidget(label_changeview)
 
-        button_yearview = QtWidgets.QPushButton('Year')
+        button_yearview = QtWidgets.QPushButton('Last year')
         button_yearview.clicked.connect(self.showyear)
+        button_yearview.setStyleSheet("""
+                                        QPushButton:hover {background-color: #2b2b2b;
+                                      }""")
         layout_head.addWidget(button_yearview)
 
+
         button_monthview = QtWidgets.QPushButton('Month')
-        button_monthview.clicked.connect(self.showmonth)
+        button_monthview.setStyleSheet("""
+                                        QPushButton:hover {background-color: #2b2b2b;
+                                      }""")
+        button_monthview.clicked.connect(lambda: (self.showcurrentmonth(), self.showmonth()))
         layout_head.addWidget(button_monthview)
 
         button_weekview = QtWidgets.QPushButton('Week')
-        button_weekview.clicked.connect(self.showweek)
+        button_weekview.setStyleSheet("""
+                                        QPushButton:hover {background-color: #2b2b2b;
+                                      }""")
+        button_weekview.clicked.connect(lambda: (self.showcurrentweek(), self.showweek()))
         layout_head.addWidget(button_weekview)
 
-        button_previous = QtWidgets.QPushButton('<')
-        button_previous.clicked.connect(self.previous)
-        layout_bottom.addWidget(button_previous)
+        self.button_previous = QtWidgets.QPushButton('<')
+        self.button_previous.setStyleSheet("""
+                                        QPushButton:hover {background-color: #2b2b2b;
+                                      }""")
+        self.button_previous.clicked.connect(self.previous)
+        layout_bottom.addWidget(self.button_previous)
 
-        button_next = QtWidgets.QPushButton('>')
-        button_next.clicked.connect(self.nexxt)
-        layout_bottom.addWidget(button_next)
+        self.button_next = QtWidgets.QPushButton('>')
+        self.button_next.setStyleSheet("""
+                                        QPushButton:hover {background-color: #2b2b2b;
+                                      }""")
+        self.button_next.clicked.connect(self.nexxt)
+        layout_bottom.addWidget(self.button_next)
 
         layout_main.addLayout(layout_head)
         layout_main.addLayout(self.layout_calendar)
@@ -79,7 +99,11 @@ class CalendarApp(QtWidgets.QWidget):
                                                        'Learning hours',
                                                        'Enter learning hours:',
                                                        QtWidgets.QLineEdit.Normal,
+                                                       
                                                        current_value)
+        
+
+
             
         if ok:
             try: 
@@ -103,6 +127,8 @@ class CalendarApp(QtWidgets.QWidget):
         self.showingweek = False
 
     def showyear(self):
+        self.button_next.hide()
+        self.button_previous.hide()
         self.clear_calendar()
         self.showingyear = True
 
@@ -174,7 +200,7 @@ class CalendarApp(QtWidgets.QWidget):
                 if color:
                     button.setStyleSheet(f'QPushButton {{background-color: {color}; }} QPushButton:hover {{background-color: #3f3f3f;}}')
 
-                    button.clicked.connect(lambda checked, d=day.day: self.day_clicked(d, self.month, self.year))
+                    button.clicked.connect(lambda checked, d=day.day, m=day.month, y=day.year: self.day_clicked(d, m, y))
                 
                 if i < 1:
                     break
@@ -189,13 +215,18 @@ class CalendarApp(QtWidgets.QWidget):
             i -= 1 
             
 
-        self.setMinimumSize(900, 300)
-        self.setMaximumSize(900, 300)
+        self.setMinimumSize(900, 200)
+        self.setMaximumSize(900, 200)
 
+
+    def showcurrentmonth(self):
+        self.month = self.today.month 
 
     def showmonth(self):
         self.clear_calendar()
         self.showingmonth = True
+        self.button_previous.show()
+        self.button_next.show()
 
         self.label_abovecalendar = QtWidgets.QLabel()
         self.label_abovecalendar.setAlignment(QtCore.Qt.AlignCenter)
@@ -243,16 +274,27 @@ class CalendarApp(QtWidgets.QWidget):
                     button.clicked.connect(lambda checked, d=day: self.day_clicked(d, self.month, self.year))
                     self.layout_calendar.addWidget(button, row_index, col_index)
         
-        self.setMinimumSize(300,400)
-        self.setMaximumSize(300,400)
+        self.setMinimumSize(310,400)
+        self.setMaximumSize(310,400)
+
+    def showcurrentweek(self):
+        today = datetime.today().date()
+        self.current_week_start = today - timedelta(days=today.weekday())
 
     def showweek(self):
         self.clear_calendar()
         self.showingweek = True
+        wlh = 0
+        self.button_previous.show()
+        self.button_next.show()
+
 
         self.label_abovecalendar = QtWidgets.QLabel()
         self.label_abovecalendar.setAlignment(QtCore.Qt.AlignCenter)
         self.layout_calendar.addWidget(self.label_abovecalendar,0,2,1,3)
+        font = QtGui.QFont()
+        font.setBold(True)
+        # self.label_abovecalendar.setFont(font)
 
         if not hasattr(self, 'current_week_start'):
             today = datetime.today().date()
@@ -263,12 +305,14 @@ class CalendarApp(QtWidgets.QWidget):
         weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         for col, weekday in enumerate(weekdays):
             label = QtWidgets.QLabel(weekday)
-            self.layout_calendar.addWidget(label, 1, col)
+            label.setAlignment(QtCore.Qt.AlignCenter)
+            self.layout_calendar.addWidget(label, 2, col)
 
         for col_index, day in enumerate(week_dates):
             button = QtWidgets.QPushButton(day.strftime('%d-%m'))
             date_str = day.strftime('%Y-%m-%d')
             hours = self.data.get(date_str, 0)
+            wlh += hours
 
             if hours >= 7:
                 color = "#b4f57a" 
@@ -290,14 +334,20 @@ class CalendarApp(QtWidgets.QWidget):
             if color:
                 button.setStyleSheet(f'QPushButton {{background-color: {color}; }} QPushButton:hover {{background-color: #3f3f3f;}}')
                 
-            button.clicked.connect(lambda checked, d=day.day: self.day_clicked(d, self.month, self.year))
+            button.clicked.connect(lambda checked, d=day.day, m=day.month, y=day.year: self.day_clicked(d, m, y))
             button.setFixedSize(50,40)
-            self.layout_calendar.addWidget(button, 2, col_index)
+            self.layout_calendar.addWidget(button, 3, col_index)
 
             if day <= datetime.now().date():
                 label = QtWidgets.QLabel(f'{hours}h')
                 label.setAlignment(QtCore.Qt.AlignCenter)
-                self.layout_calendar.addWidget(label, 3, col_index)
+                self.layout_calendar.addWidget(label, 4, col_index)
+
+        self.layout_calendar.setRowMinimumHeight(1, 20)
+        self.layout_calendar.setRowMinimumHeight(5, 20)
+
+        weeklyhours = QtWidgets.QLabel(f"Weekly learning hours: {wlh}")
+        self.layout_calendar.addWidget(weeklyhours, 6, 0, 1, 4)
 
             
 
@@ -306,8 +356,8 @@ class CalendarApp(QtWidgets.QWidget):
         end_str = (self.current_week_start + timedelta(days=6)).strftime('%d-%m')
         self.label_abovecalendar.setText(f'{start_str} - {end_str}')
 
-        self.setMinimumSize(400,250)
-        self.setMaximumSize(400,250)
+        self.setMinimumSize(400,280)
+        self.setMaximumSize(400,280)
         
 
     def previous(self):
